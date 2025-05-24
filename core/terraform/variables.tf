@@ -186,6 +186,16 @@ variable "firewall_sku" {
   default     = ""
 }
 
+variable "servicebus_sku" {
+  type        = string
+  description = "Azure Service Bus SKU. Determines the tier (Standard or Premium) for the Service Bus namespace."
+  default     = "Premium"
+  validation {
+    condition     = contains(["Standard", "Premium"], var.servicebus_sku)
+    error_message = "The servicebus_sku must be one of Standard or Premium."
+  }
+}
+
 variable "app_gateway_sku" {
   description = "Application Gateway SKU"
   type        = string
