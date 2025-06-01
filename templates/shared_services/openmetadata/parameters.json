@@ -1,0 +1,20 @@
+{
+  "tfstate_container_name": "tfstate",
+  "arm_use_msi": false,
+  "arm_environment": "public",
+  "openmetadata_kubernetes_namespace": "openmetadata",
+  "openmetadata_helm_chart_url": "https://helm.open-metadata.org/",
+  "openmetadata_helm_chart_name": "openmetadata",
+  "openmetadata_helm_chart_version": "1.7.0",
+  "openmetadata_create_namespace": true,
+  "database_port": "5432",
+  "database_name": "openmetadata_db",
+  "database_extra_args": "",
+  "database_driver_class": "org.postgresql.Driver",
+  "database_type": "postgres",
+  "elasticsearch_port": "9200",
+  "elasticsearch_scheme": "http",
+  "elasticsearch_user": "",
+  "elasticsearch_password": "",
+  "airflow_enabled": true
+}

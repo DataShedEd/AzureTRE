@@ -1,0 +1,247 @@
+schemaVersion: 1.0.0
+name: tre-shared-service-openmetadata
+version: 0.1.0 # Initial version
+description: "A shared service for OpenMetadata, a data discovery and cataloguing tool."
+dockerfile: Dockerfile.tmpl
+registry: azuretre
+
+credentials:
+  - name: azure_tenant_id
+    env: ARM_TENANT_ID
+  - name: azure_subscription_id
+    env: ARM_SUBSCRIPTION_ID
+  - name: azure_client_id
+    env: ARM_CLIENT_ID
+  - name: azure_client_secret
+    env: ARM_CLIENT_SECRET
+  # Kubeconfig might be needed if helm commands are run against a pre-existing cluster.
+  # For now, assume AKS is provisioned by Terraform or context is otherwise available.
+  # - name: kubeconfig
+  #   env: KUBECONFIG
+
+parameters:
+  # Standard TRE parameters
+  - name: tre_id
+    type: string
+    description: "The ID of the parent TRE instance e.g., mytre-dev-3142"
+  - name: id # Renamed from tre_resource_id to align with typical Porter bundle parameters for the resource being managed
+    type: string
+    description: "Unique ID for this OpenMetadata service instance."
+  - name: tfstate_resource_group_name
+    type: string
+    description: "Resource group containing the Terraform state storage account for this bundle."
+  - name: tfstate_storage_account_name
+    type: string
+    description: "The name of the Terraform state storage account for this bundle."
+  - name: tfstate_container_name
+    type: string
+    default: "tfstate"
+    description: "The name of the Terraform state storage container for this bundle."
+  - name: arm_use_msi
+    env: ARM_USE_MSI
+    type: boolean
+    default: false
+  - name: arm_environment
+    env: ARM_ENVIRONMENT
+    type: string
+    default: "public"
+
+  # OpenMetadata specific parameters
+  - name: openmetadata_kubernetes_namespace
+    type: string
+    default: "openmetadata"
+    description: "Kubernetes namespace to deploy OpenMetadata into."
+  - name: openmetadata_helm_chart_url
+    type: string
+    default: "https://helm.open-metadata.org/"
+    description: "URL of the OpenMetadata Helm chart repository."
+  - name: openmetadata_helm_chart_name
+    type: string
+    default: "openmetadata" # Usually the chart is named 'openmetadata' in their repo
+    description: "Name of the OpenMetadata Helm chart in the repository."
+  - name: openmetadata_helm_chart_version
+    type: string
+    default: "1.7.0" # Replace with a recent, stable version after checking their repo
+    description: "Version of the OpenMetadata Helm chart to deploy."
+  - name: openmetadata_create_namespace
+    type: boolean
+    default: true
+    description: "Set to true to let Helm create the namespace if it doesn't exist."
+
+  # External Database Configuration (PostgreSQL example)
+  # Users will need to provide these if not deploying DB via this bundle
+  - name: database_host
+    type: string
+    description: "Hostname of the external database server (PostgreSQL or MySQL)."
+  - name: database_port
+    type: string
+    default: "5432" # Default for PostgreSQL
+    description: "Port of the external database server."
+  - name: database_user
+    type: string
+    description: "Username for the database."
+  - name: database_password
+    type: string
+    sensitive: true
+    description: "Password for the database user."
+  - name: database_name
+    type: string
+    default: "openmetadata_db"
+    description: "Name of the database for OpenMetadata."
+  - name: database_extra_args # For JDBC connection string, e.g., "sslmode=require" for PostgreSQL
+    type: string
+    default: ""
+    description: "Extra arguments for the database JDBC connection string (e.g., sslmode=require)."
+  - name: database_driver_class # e.g. org.postgresql.Driver or com.mysql.cj.jdbc.Driver
+    type: string
+    default: "org.postgresql.Driver"
+    description: "JDBC Driver class for the database."
+  - name: database_type # 'mysql' or 'postgres' used by OpenMetadata chart
+    type: string
+    default: "postgres"
+    description: "Type of database ('mysql' or 'postgres')."
+
+
+  # External Elasticsearch Configuration
+  # Users will need to provide these if not deploying Elasticsearch via this bundle
+  - name: elasticsearch_host
+    type: string
+    description: "Hostname of the Elasticsearch server."
+  - name: elasticsearch_port
+    type: string
+    default: "9200"
+    description: "Port of the Elasticsearch server."
+  - name: elasticsearch_scheme
+    type: string
+    default: "http"
+    description: "Scheme for Elasticsearch connection (http or https)."
+  - name: elasticsearch_user
+    type: string
+    default: ""
+    description: "Username for Elasticsearch (if security is enabled)."
+  - name: elasticsearch_password
+    type: string
+    sensitive: true
+    default: ""
+    description: "Password for Elasticsearch (if security is enabled)."
+
+
+  # Airflow configuration (OpenMetadata chart can deploy it)
+  - name: airflow_enabled
+    type: boolean
+    default: true
+    description: "Set to true to deploy Airflow along with OpenMetadata."
+
+mixins:
+  - terraform:
+      clientVersion: 1.9.8 # Matching Gitea example
+  - helm3:
+      # Specify clientVersion if needed, otherwise defaults to latest stable.
+      # clientVersion: "v3.9.0"
+      repositories:
+        openmetadata:
+          url: ${ bundle.parameters.openmetadata_helm_chart_url }
+
+# Define outputs from the Helm chart/Terraform
+outputs:
+  - name: openmetadata_ui_url
+    type: string
+    description: "URL to access the OpenMetadata UI."
+  - name: openmetadata_api_endpoint
+    type: string
+    description: "API endpoint for OpenMetadata."
+  - name: openmetadata_namespace
+    type: string
+    description: "Kubernetes namespace where OpenMetadata is deployed."
+    applyTo:
+      - install
+      - upgrade
+      - uninstall # To confirm where it was
+    value: ${ bundle.parameters.openmetadata_kubernetes_namespace }
+
+
+install:
+  # 1. (Optional) Terraform step to create namespace or other Azure pre-requisites
+  #    For now, we rely on Helm's createNamespace or assume namespace exists.
+  #    A TF step for backend config is implicitly handled by Porter if `state` is configured.
+
+  # 2. Helm install for OpenMetadata
+  - helm3:
+      description: "Install OpenMetadata Helm chart"
+      name: ${ bundle.parameters.id } # Helm release name
+      chart: openmetadata/${ bundle.parameters.openmetadata_helm_chart_name }
+      namespace: ${ bundle.parameters.openmetadata_kubernetes_namespace }
+      version: ${ bundle.parameters.openmetadata_helm_chart_version }
+      createNamespace: ${ bundle.parameters.openmetadata_create_namespace }
+      replace: true # Equivalent to helm upgrade --install
+      values:
+        openmetadata: # This is how the official OpenMetadata chart structures its values
+          config:
+            database:
+              driverClass: ${ bundle.parameters.database_driver_class }
+              hostPort: "${ bundle.parameters.database_host }:${ bundle.parameters.database_port }"
+              username: ${ bundle.parameters.database_user }
+              password: ${ bundle.parameters.database_password }
+              database: ${ bundle.parameters.database_name }
+              dbScheme: ${ bundle.parameters.database_type } # e.g. postgresql or mysql
+              # jdbcOptions: ${ bundle.parameters.database_extra_args } # Needs to be confirmed with chart values structure
+            elasticsearch:
+              host: ${ bundle.parameters.elasticsearch_host }
+              port: ${ bundle.parameters.elasticsearch_port }
+              scheme: ${ bundle.parameters.elasticsearch_scheme }
+              username: ${ bundle.parameters.elasticsearch_user }
+              password: ${ bundle.parameters.elasticsearch_password }
+        airflow:
+          enabled: ${ bundle.parameters.airflow_enabled }
+        # Add other necessary values based on OpenMetadata Helm chart's values.yaml
+        # For example, service type (LoadBalancer, ClusterIP), ingress configuration etc.
+        # openmetadata-server:
+        #   service:
+        #     type: LoadBalancer # Or ClusterIP if using an Ingress controller
+      outputs:
+        # Attempt to get service URL - exact fields depend on Helm chart's output structure
+        # This is a placeholder, actual output retrieval will need chart inspection
+        - name: openmetadata_ui_url
+        - name: openmetadata_api_endpoint
+
+
+upgrade:
+  - helm3:
+      description: "Upgrade OpenMetadata Helm chart"
+      name: ${ bundle.parameters.id } # Helm release name
+      chart: openmetadata/${ bundle.parameters.openmetadata_helm_chart_name }
+      namespace: ${ bundle.parameters.openmetadata_kubernetes_namespace }
+      version: ${ bundle.parameters.openmetadata_helm_chart_version }
+      createNamespace: ${ bundle.parameters.openmetadata_create_namespace } # Keep true for consistency
+      values:
+        openmetadata: # This is how the official OpenMetadata chart structures its values
+          config:
+            database:
+              driverClass: ${ bundle.parameters.database_driver_class }
+              hostPort: "${ bundle.parameters.database_host }:${ bundle.parameters.database_port }"
+              username: ${ bundle.parameters.database_user }
+              password: ${ bundle.parameters.database_password }
+              database: ${ bundle.parameters.database_name }
+              dbScheme: ${ bundle.parameters.database_type }
+              # jdbcOptions: ${ bundle.parameters.database_extra_args }
+            elasticsearch:
+              host: ${ bundle.parameters.elasticsearch_host }
+              port: ${ bundle.parameters.elasticsearch_port }
+              scheme: ${ bundle.parameters.elasticsearch_scheme }
+              username: ${ bundle.parameters.elasticsearch_user }
+              password: ${ bundle.parameters.elasticsearch_password }
+        airflow:
+          enabled: ${ bundle.parameters.airflow_enabled }
+      outputs:
+        - name: openmetadata_ui_url
+        - name: openmetadata_api_endpoint
+
+uninstall:
+  - helm3:
+      description: "Uninstall OpenMetadata Helm chart"
+      name: ${ bundle.parameters.id }
+      namespace: ${ bundle.parameters.openmetadata_kubernetes_namespace }
+      # Add `ignoreErrors: true` if you want Porter to continue on Helm error (e.g., if release not found)
+
+  # (Optional) Terraform step to clean up Azure resources created by this bundle
+  # (e.g., namespace if not deleted by Helm, or if TF was used to create it).

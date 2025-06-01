@@ -1,0 +1,4 @@
+# Basic invocation image, can be expanded if needed
+FROM ghcr.io/getporter/porter-agent-terraform:v0.4.0-terraform.1.9.8
+ARG BUNDLE_DIR
+COPY . ${BUNDLE_DIR}

@@ -1,0 +1,179 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OpenMetadata Shared Service",
+  "description": "Parameters for deploying OpenMetadata as a shared service.",
+  "type": "object",
+  "properties": {
+    "tre_id": {
+      "type": "string",
+      "title": "TRE ID",
+      "description": "The ID of the parent TRE instance e.g., mytre-dev-3142."
+    },
+    "id": {
+      "type": "string",
+      "title": "OpenMetadata Instance ID",
+      "description": "Unique ID for this OpenMetadata service instance."
+    },
+    "tfstate_resource_group_name": {
+      "type": "string",
+      "title": "Terraform State Resource Group Name",
+      "description": "Resource group containing the Terraform state storage account for this bundle."
+    },
+    "tfstate_storage_account_name": {
+      "type": "string",
+      "title": "Terraform State Storage Account Name",
+      "description": "The name of the Terraform state storage account for this bundle."
+    },
+    "tfstate_container_name": {
+      "type": "string",
+      "title": "Terraform State Container Name",
+      "default": "tfstate",
+      "description": "The name of the Terraform state storage container for this bundle."
+    },
+    "arm_use_msi": {
+      "type": "boolean",
+      "title": "Use MSI for ARM Authentication",
+      "default": false,
+      "description": "Set to true to use Managed Service Identity for Azure authentication."
+    },
+    "arm_environment": {
+      "type": "string",
+      "title": "ARM Environment",
+      "default": "public",
+      "description": "Azure environment (e.g., public, usgovernment)."
+    },
+    "openmetadata_kubernetes_namespace": {
+      "type": "string",
+      "title": "Kubernetes Namespace",
+      "default": "openmetadata",
+      "description": "Kubernetes namespace to deploy OpenMetadata into."
+    },
+    "openmetadata_helm_chart_url": {
+      "type": "string",
+      "title": "OpenMetadata Helm Chart URL",
+      "default": "https://helm.open-metadata.org/",
+      "description": "URL of the OpenMetadata Helm chart repository."
+    },
+    "openmetadata_helm_chart_name": {
+      "type": "string",
+      "title": "OpenMetadata Helm Chart Name",
+      "default": "openmetadata",
+      "description": "Name of the OpenMetadata Helm chart in the repository."
+    },
+    "openmetadata_helm_chart_version": {
+      "type": "string",
+      "title": "OpenMetadata Helm Chart Version",
+      "default": "1.7.0",
+      "description": "Version of the OpenMetadata Helm chart to deploy. Please check https://github.com/open-metadata/openmetadata-helm-charts/releases for the latest version."
+    },
+    "openmetadata_create_namespace": {
+      "type": "boolean",
+      "title": "Create Kubernetes Namespace",
+      "default": true,
+      "description": "Set to true to let Helm create the namespace if it doesn't exist."
+    },
+    "database_host": {
+      "type": "string",
+      "title": "Database Host",
+      "description": "Hostname of the external database server (PostgreSQL or MySQL)."
+    },
+    "database_port": {
+      "type": "string",
+      "title": "Database Port",
+      "default": "5432",
+      "description": "Port of the external database server."
+    },
+    "database_user": {
+      "type": "string",
+      "title": "Database User",
+      "description": "Username for the database."
+    },
+    "database_password": {
+      "type": "string",
+      "title": "Database Password",
+      "description": "Password for the database user.",
+      "format": "password"
+    },
+    "database_name": {
+      "type": "string",
+      "title": "Database Name",
+      "default": "openmetadata_db",
+      "description": "Name of the database for OpenMetadata."
+    },
+    "database_extra_args": {
+      "type": "string",
+      "title": "Database Extra JDBC Arguments",
+      "default": "",
+      "description": "Extra arguments for the database JDBC connection string (e.g., sslmode=require for PostgreSQL, or useSSL=false for MySQL if not using SSL)."
+    },
+    "database_driver_class": {
+      "type": "string",
+      "title": "Database JDBC Driver Class",
+      "default": "org.postgresql.Driver",
+      "description": "JDBC Driver class for the database (e.g., org.postgresql.Driver or com.mysql.cj.jdbc.Driver)."
+    },
+    "database_type": {
+      "type": "string",
+      "title": "Database Type",
+      "default": "postgres",
+      "enum": ["postgres", "mysql"],
+      "description": "Type of database ('postgres' or 'mysql'). This determines the dbScheme for OpenMetadata."
+    },
+    "elasticsearch_host": {
+      "type": "string",
+      "title": "Elasticsearch Host",
+      "description": "Hostname of the Elasticsearch server."
+    },
+    "elasticsearch_port": {
+      "type": "string",
+      "title": "Elasticsearch Port",
+      "default": "9200",
+      "description": "Port of the Elasticsearch server."
+    },
+    "elasticsearch_scheme": {
+      "type": "string",
+      "title": "Elasticsearch Scheme",
+      "default": "http",
+      "enum": ["http", "https"],
+      "description": "Scheme for Elasticsearch connection (http or https)."
+    },
+    "elasticsearch_user": {
+        "type": "string",
+        "title": "Elasticsearch User",
+        "default": "",
+        "description": "Username for Elasticsearch (if security is enabled)."
+    },
+    "elasticsearch_password": {
+        "type": "string",
+        "title": "Elasticsearch Password",
+        "default": "",
+        "description": "Password for Elasticsearch (if security is enabled).",
+        "format": "password"
+    },
+    "airflow_enabled": {
+      "type": "boolean",
+      "title": "Enable Airflow",
+      "default": true,
+      "description": "Set to true to deploy Airflow along with OpenMetadata for ingestion workflows."
+    }
+  },
+  "required": [
+    "tre_id",
+    "id",
+    "tfstate_resource_group_name",
+    "tfstate_storage_account_name",
+    "openmetadata_helm_chart_version",
+    "database_host",
+    "database_user",
+    "database_password",
+    "elasticsearch_host"
+  ],
+  "uiSchema": {
+    "database_password": {
+      "ui:widget": "password"
+    },
+    "elasticsearch_password": {
+        "ui:widget": "password"
+    }
+  }
+}
